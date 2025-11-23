@@ -11,7 +11,7 @@ type userUsecase struct {
 	txManager      domain.TxManager
 }
 
-func NewUserUsercase(userRepository domain.UserRepository, prRepository domain.PRRepository, txManager domain.TxManager) domain.UserUsecase {
+func NewUserUsecase(userRepository domain.UserRepository, prRepository domain.PRRepository, txManager domain.TxManager) domain.UserUsecase {
 	return &userUsecase{
 		userRepository: userRepository,
 		prRepository:   prRepository,
