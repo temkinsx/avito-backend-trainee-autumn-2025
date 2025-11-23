@@ -3,6 +3,7 @@ package usecase
 import (
 	"avito-backend-trainee-autumn-2025/internal/domain"
 	"context"
+	"fmt"
 )
 
 type teamUsecase struct {
@@ -25,7 +26,7 @@ func (tu *teamUsecase) Add(ctx context.Context, team *domain.Team) (*domain.Team
 		return nil, err
 	}
 	if exists {
-		return nil, domain.ErrNotFound
+		return nil, fmt.Errorf("team_name %w", domain.ErrAlreadyExists)
 	}
 
 	err = tu.txManager.WithinTx(ctx, func(ctx context.Context, repos *domain.Repos) error {
