@@ -39,6 +39,7 @@ func (p *prRepository) Create(ctx context.Context, pr *domain.PullRequest) (*dom
 				return nil, domain.ErrNotFound
 			}
 		}
+		return nil, err
 	}
 
 	return &created, nil
@@ -66,7 +67,8 @@ func (p *prRepository) FetchByID(ctx context.Context, prID string) (*domain.Pull
 func (p *prRepository) UpdateStatusMerged(ctx context.Context, prID string) (*domain.PullRequest, error) {
 	const q = `
 		UPDATE pull_requests
-			SET status = 'MERGED'
+			SET status = 'MERGED',
+			    merged_at = COALESCE(merged_at, now())
 		WHERE id = $1
 		RETURNING id, name, author_id, status, created_at, merged_at;
 	`
