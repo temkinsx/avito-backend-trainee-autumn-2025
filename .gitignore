@@ -1,0 +1,33 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go build cache
+/build/
+bin/
+cmd/**/bin/
+
+# IDE/Editor stuff
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Dependencies (если используешь vendoring)
+vendor/
+
+# Coverage
+coverage.out
+*.cov
+
+# Env files
+.env
+.env.*
