@@ -43,6 +43,9 @@ components:
                 - NOT_ASSIGNED
                 - NO_CANDIDATE
                 - NOT_FOUND
+                - BAD_REQUEST
+                - VALIDATION_ERROR
+                - INTERNAL_ERROR
             message:
               type: string
       example:
