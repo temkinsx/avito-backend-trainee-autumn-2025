@@ -3,6 +3,10 @@ package usecase
 import (
 	"avito-backend-trainee-autumn-2025/internal/domain"
 	"context"
+	"errors"
+	"fmt"
+	"math/rand"
+	"time"
 )
 
 type prUsecase struct {
@@ -23,8 +27,15 @@ func (p *prUsecase) CreateWithReviewers(ctx context.Context, newPR *domain.PullR
 	var result *domain.PullRequest
 
 	err := p.txManager.WithinTx(ctx, func(ctx context.Context, repos *domain.Repos) error {
+		if newPR.Status == "" {
+			newPR.Status = domain.StatusOpen
+		}
+
 		createdPR, err := repos.PR.Create(ctx, newPR)
 		if err != nil {
+			if errors.Is(err, domain.ErrAlreadyExists) {
+				return fmt.Errorf("PR id %w", err)
+			}
 			return err
 		}
 
@@ -43,6 +54,10 @@ func (p *prUsecase) CreateWithReviewers(ctx context.Context, newPR *domain.PullR
 			result = createdPR
 			return nil
 		}
+
+		rand.New(rand.NewSource(time.Now().UnixNano())).Shuffle(len(candidates), func(i, j int) {
+			candidates[i], candidates[j] = candidates[j], candidates[i]
+		})
 
 		if len(candidates) > 2 {
 			candidates = candidates[:2]
@@ -69,7 +84,28 @@ func (p *prUsecase) CreateWithReviewers(ctx context.Context, newPR *domain.PullR
 }
 
 func (p *prUsecase) Merge(ctx context.Context, prID string) (*domain.PullRequest, error) {
-	return p.prRepository.UpdateStatusMerged(ctx, prID)
+	var result *domain.PullRequest
+
+	err := p.txManager.WithinTx(ctx, func(ctx context.Context, repos *domain.Repos) error {
+		pr, err := repos.PR.UpdateStatusMerged(ctx, prID)
+		if err != nil {
+			return err
+		}
+
+		reviewers, err := repos.PR.ListReviewers(ctx, pr.ID)
+		if err != nil {
+			return err
+		}
+
+		pr.Reviewers = reviewers
+		result = pr
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (p *prUsecase) Reassign(ctx context.Context, prID, oldReviewerID string) (*domain.PullRequest, string, error) {
@@ -96,12 +132,25 @@ func (p *prUsecase) Reassign(ctx context.Context, prID, oldReviewerID string) (*
 			return domain.ErrNotAssigned
 		}
 
-		author, err := repos.User.FetchByID(ctx, pr.AuthorID)
+		oldReviewer, err := repos.User.FetchByID(ctx, oldReviewerID)
 		if err != nil {
 			return err
 		}
 
-		revs, err := repos.User.FetchActiveByTeam(ctx, author.TeamName, author.ID, oldReviewerID)
+		currentReviewers, err := repos.PR.ListReviewers(ctx, pr.ID)
+		if err != nil {
+			return err
+		}
+
+		excludeIDs := make([]string, 0, len(currentReviewers)+2)
+		excludeIDs = append(excludeIDs, oldReviewerID, pr.AuthorID)
+		for _, reviewerID := range currentReviewers {
+			if reviewerID != oldReviewerID {
+				excludeIDs = append(excludeIDs, reviewerID)
+			}
+		}
+
+		revs, err := repos.User.FetchActiveByTeam(ctx, oldReviewer.TeamName, excludeIDs...)
 		if err != nil {
 			return err
 		}
@@ -109,7 +158,8 @@ func (p *prUsecase) Reassign(ctx context.Context, prID, oldReviewerID string) (*
 			return domain.ErrNoCandidate
 		}
 
-		newRevID = revs[0].ID
+		r := rand.New(rand.NewSource(time.Now().UnixNano()))
+		newRevID = revs[r.Intn(len(revs))].ID
 
 		err = repos.PR.ReplaceReviewer(ctx, pr.ID, oldReviewerID, newRevID)
 		if err != nil {
