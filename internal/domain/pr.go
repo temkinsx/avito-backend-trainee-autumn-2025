@@ -23,21 +23,13 @@ type PullRequest struct {
 }
 
 type PRRepository interface {
-	// Create inserts new PR (without reviewers)
 	Create(ctx context.Context, pr *PullRequest) (*PullRequest, error)
-	// FetchByID returns PR without reviewers
 	FetchByID(ctx context.Context, prID string) (*PullRequest, error)
-	// UpdateStatusMerged sets PR.status = MERGED and returns updated PR
 	UpdateStatusMerged(ctx context.Context, prID string) (*PullRequest, error)
-	// ListReviewableByUserID returns PRs where userID is assigned reviewer
 	ListReviewableByUserID(ctx context.Context, userID string) ([]*PullRequest, error)
-	// ListReviewers returns all reviewers for PR
 	ListReviewers(ctx context.Context, prID string) ([]string, error)
-	// InsertReviewer adds user to PR reviewers
 	InsertReviewer(ctx context.Context, prID, userID string) error
-	// ReplaceReviewer old → new
 	ReplaceReviewer(ctx context.Context, prID, oldReviewerID, newReviewerID string) error
-	// ReviewerAssigned checks if user is reviewer on PR
 	ReviewerAssigned(ctx context.Context, prID, userID string) (bool, error)
 }
 
